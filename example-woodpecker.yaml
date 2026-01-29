@@ -1,0 +1,36 @@
+steps:
+  - name: version
+    image: alpine
+    commands:
+      - 'apk add --no-cache make'
+      - 'make ci-version'
+
+  - name: build
+    image: git.teletype.hu/internal/tic80pro:latest
+    environment:
+      XDG_RUNTIME_DIR: /tmp
+    commands:
+      - 'make ci-export'
+
+  - name: artifact
+    image: alpine
+    environment:
+      DROPAREA_HOST: vps.teletype.hu
+      DROPAREA_PORT: 2223
+      DROPAREA_TARGET_PATH: /home/drop
+      DROPAREA_USER: drop
+      DROPAREA_SSH_PASSWORD:
+        from_secret: droparea_ssh_password
+    commands:
+      - 'apk add --no-cache make openssh-client sshpass'
+      - 'make ci-upload'
+
+  - name: update
+    image: alpine
+    environment:
+      UPDATE_SERVER: https://games.vps.teletype.hu
+      UPDATE_SECRET:
+        from_secret: update_secret_key
+    commands:
+      - 'apk add --no-cache make curl'
+      - 'make ci-update'
