@@ -16,6 +16,9 @@ ASSETS_LUA = inc/meta/meta.assets.lua
 ASSETS_DIR = assets
 ASSET_TYPES = tiles sprites sfx music
 
+LINT_TMP_LUA  := /tmp/_lint_combined.lua
+LINT_TMP_MAP   := /tmp/_lint_map.txt
+
 # CI/CD variables
 VERSION_FILE = .version
 GAME_LANG ?= lua
@@ -31,10 +34,10 @@ build: $(OUTPUT)
 
 $(OUTPUT): $(SRC) $(ORDER)
 	@rm -f $(OUTPUT)
-	@while read f; do \
+	@sed 's/\r$$//' $(ORDER) | while read f; do \
 		cat "$(SRC_DIR)/$$f" >> $(OUTPUT); \
 		echo "" >> $(OUTPUT); \
-	done < $(ORDER)
+	done
 
 export: build
 	@if [ -z "$(VERSION)" ]; then \
@@ -58,25 +61,98 @@ watch:
 	make build
 	fswatch -o $(SRC_DIR) $(ORDER) assets | while read; do make build; done
 
-import_assets:
-	@for t in $(ASSET_TYPES); do \
+import_assets: $(OUTPUT)
+	@TIC_CMD="load $(OUTPUT) &"; \
+	for t in $(ASSET_TYPES); do \
 		for f in $(ASSETS_DIR)/$$t/*.png; do \
 			[ -e "$$f" ] || continue; \
 			echo "==> Importing $$f as $$t..."; \
-			tic80 --cli --skip --fs=. --cmd="import $$t $$f & exit"; \
+			TIC_CMD="$${TIC_CMD} & import $$t $$f"; \
 		done; \
-	done
+	done; \
+	TIC_CMD="$$TIC_CMD save & exit"; \
+	echo $$TIC_CMD; \
+	tic80 --cli --skip --fs=. --cmd="$$TIC_CMD"
 
-export_assets: build
+# export helper function
+define f_export_asset_awk
+	cat $(2) | awk '/-- <$(1)>/,/<\/$(1)>/' >> $(3)
+endef
+
+lint:
+	@echo "==> Merging..."
+	@rm -f $(LINT_TMP_LUA) $(LINT_TMP_MAP)
+	@touch $(LINT_TMP_LUA)
+	@line=1; \
+	while IFS= read -r f || [ -n "$$f" ]; do \
+	    [ -z "$$f" ] && continue; \
+	    before=$$(wc -l < $(LINT_TMP_LUA)); \
+	    cat "$(SRC_DIR)/$$f" >> $(LINT_TMP_LUA); \
+	    printf '\n' >> $(LINT_TMP_LUA); \
+	    after=$$(wc -l < $(LINT_TMP_LUA)); \
+	    linecount=$$((after - before)); \
+	    echo "$$line $$linecount $(SRC_DIR)/$$f" >> $(LINT_TMP_MAP); \
+	    line=$$((line + linecount)); \
+	done < $(ORDER)
+	@echo "==> luacheck..."
+	@LINT_OUTPUT=$$(luacheck --no-max-line-length $(LINT_TMP_LUA) 2>&1 | awk -v map=$(LINT_TMP_MAP) ' \
+	BEGIN { \
+	    NR_map = 0; \
+	    while ((getline line < map) > 0) { \
+	        n = split(line, a, " "); \
+	        start[NR_map] = a[1]+0; \
+	        count[NR_map] = a[2]+0; \
+	        fname[NR_map] = a[3]; \
+	        NR_map++; \
+	    } \
+	} \
+	/^[^:]+:[0-9]+:[0-9]+:/ { \
+	    colon1 = index($$0, ":"); \
+	    rest1  = substr($$0, colon1+1); \
+	    colon2 = index(rest1, ":"); \
+	    absline = substr(rest1, 1, colon2-1) + 0; \
+	    rest2  = substr(rest1, colon2+1); \
+	    colon3 = index(rest2, ":"); \
+	    col    = substr(rest2, 1, colon3-1); \
+	    rest   = substr(rest2, colon3); \
+	    found  = 0; \
+	    for (i = 0; i < NR_map; i++) { \
+	        end_line = start[i] + count[i] -1; \
+	        if (absline >= start[i] && absline <= end_line) { \
+	            relline = absline - start[i] + 1; \
+	            print fname[i] ":" relline ":" col ":" rest; \
+	            found = 1; \
+	            break; \
+	        } \
+	    } \
+	    if (!found) print $$0; \
+	    next; \
+	} \
+	{ print } \
+	'); \
+	echo "$$LINT_OUTPUT"; \
+	NUM_ISSUES=$$(echo "$$LINT_OUTPUT" | grep -cE "^[^:]+:[0-9]+:[0-9]+:"); \
+	if [ "$$NUM_ISSUES" -gt 0 ]; then \
+	    echo "Total: $$NUM_ISSUES issue(s) found, commit aborted."; \
+	    exit 1; \
+	else \
+	    echo "Checking /tmp/_lint_combined.lua                  OK"; \
+	    echo "Total: 0 warnings / 0 errors in 1 file"; \
+	fi
+	@rm -f $(LINT_TMP_LUA) $(LINT_TMP_MAP)
+
+export_assets:
+# $(OUTPUT) would be a circular dependency
+	@test -e $(OUTPUT)
 	@echo "==> Exporting TIC-80 asset sections"
 	@mkdir -p inc/meta
-	@sed -n '/^-- <PALETTE>/,/^-- <\/PALETTE>/p;\
-	         /^-- <TILES>/,/^-- <\/TILES>/p;\
-	         /^-- <SPRITES>/,/^-- <\/SPRITES>/p;\
-	         /^-- <MAP>/,/^-- <\/MAP>/p;\
-	         /^-- <SFX>/,/^-- <\/SFX>/p;\
-	         /^-- <MUSIC>/,/^-- <\/MUSIC>/p' \
-		$(OUTPUT) > $(ASSETS_LUA)
+	@echo -n '' > $(ASSETS_LUA)
+	@$(call f_export_asset_awk,PALETTE,$(OUTPUT),$(ASSETS_LUA))
+	@$(call f_export_asset_awk,TILES,$(OUTPUT),$(ASSETS_LUA))
+	@$(call f_export_asset_awk,SPRITES,$(OUTPUT),$(ASSETS_LUA))
+	@$(call f_export_asset_awk,MAP,$(OUTPUT),$(ASSETS_LUA))
+	@$(call f_export_asset_awk,SFX,$(OUTPUT),$(ASSETS_LUA))
+	@$(call f_export_asset_awk,WAVES,$(OUTPUT),$(ASSETS_LUA))
 
 clean:
 	@rm -f $(PROJECT)-*.tic $(PROJECT)-*.html.zip $(OUTPUT)
@@ -114,5 +190,25 @@ ci-update:
 	echo "==> Triggering update for version $$VERSION"; \
 	curl "$(UPDATE_SERVER)/update?secret=$(UPDATE_SECRET)&name=$(PROJECT)&platform=tic80&version=$$VERSION"
 
-.PHONY: all build export watch import_assets export_assets clean ci-version ci-export ci-upload ci-update
+install_precommit_hook:
+	@echo "Installing Git pre-commit hook (lint check)..."
+	@mkdir -p .git/hooks
+	@printf '#!/bin/bash\n' > .git/hooks/pre-commit
+	@printf 'echo "Running lint before commit..."\n' >> .git/hooks/pre-commit
+	@printf 'make lint\n' >> .git/hooks/pre-commit
+	@printf 'if [ $$? -ne 0 ]; then\n' >> .git/hooks/pre-commit
+	@printf '    echo "Lint failed! Commit aborted."\n' >> .git/hooks/pre-commit
+	@printf '    exit 1\n' >> .git/hooks/pre-commit
+	@printf 'fi\n' >> .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "Pre-commit hook installed successfully."
 
+.PHONY: all build export watch import_assets export_assets clean lint ci-version ci-export ci-upload ci-update install_precommit_hook
+
+#-- <WAVES>
+#-- 000:224578acdeeeeddcba95434567653100
+#-- </WAVES>
+#
+#-- <SFX>
+#-- 000:000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000500000000000
+#-- </SFX>
