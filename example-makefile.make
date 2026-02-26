@@ -6,8 +6,12 @@ PROJECT = impostor
 
 ORDER      = $(PROJECT).inc
 OUTPUT     = $(PROJECT).lua
+OUTPUT_ORIGINAL   = $(PROJECT).original.lua
 OUTPUT_ZIP = $(PROJECT).html.zip
 OUTPUT_TIC = $(PROJECT).tic
+
+MINIFY     = minify.lua
+MINIFY_URL = https://raw.githubusercontent.com/ztimar31/lua-minify-tic80/refs/heads/master/minify.lua
 
 SRC_DIR    = inc
 SRC        = $(shell sed 's|^|$(SRC_DIR)/|' $(ORDER))
@@ -39,7 +43,19 @@ $(OUTPUT): $(SRC) $(ORDER)
 		echo "" >> $(OUTPUT); \
 	done
 
-export: build
+$(MINIFY):
+	@echo "==> Downloading $(MINIFY)"
+	@curl -fsSL $(MINIFY_URL) -o $(MINIFY)
+
+minify: $(OUTPUT_ORIGINAL)
+
+$(OUTPUT_ORIGINAL): $(SRC) $(ORDER) $(MINIFY)
+	@$(MAKE) build
+	@echo "==> Minifying $(OUTPUT)"
+	@cp $(OUTPUT) $(OUTPUT_ORIGINAL)
+	@lua $(MINIFY) minify $(OUTPUT_ORIGINAL) > $(OUTPUT)
+
+export: build minify
 	@if [ -z "$(VERSION)" ]; then \
 		echo "ERROR: VERSION not set!"; \
 		exit 1; \
@@ -58,8 +74,8 @@ export: build
 	@ls -lh $(PROJECT)-$(VERSION).* $(PROJECT).tic $(PROJECT).html.zip 2>/dev/null || true
 
 watch:
-	make build
-	fswatch -o $(SRC_DIR) $(ORDER) assets | while read; do make build; done
+	$(MAKE) build
+	fswatch -o $(SRC_DIR) $(ORDER) assets | while read; do $(MAKE) build; done
 
 import_assets: $(OUTPUT)
 	@TIC_CMD="load $(OUTPUT) &"; \
@@ -85,6 +101,7 @@ lint:
 	@touch $(LINT_TMP_LUA)
 	@line=1; \
 	while IFS= read -r f || [ -n "$$f" ]; do \
+	    f=$$(printf '%s' "$$f" | tr -d '\r'); \
 	    [ -z "$$f" ] && continue; \
 	    before=$$(wc -l < $(LINT_TMP_LUA)); \
 	    cat "$(SRC_DIR)/$$f" >> $(LINT_TMP_LUA); \
@@ -155,7 +172,7 @@ export_assets:
 	@$(call f_export_asset_awk,WAVES,$(OUTPUT),$(ASSETS_LUA))
 
 clean:
-	@rm -f $(PROJECT)-*.tic $(PROJECT)-*.html.zip $(OUTPUT)
+	@rm -f $(PROJECT)-*.tic $(PROJECT)-*.html.zip $(OUTPUT) $(OUTPUT_MIN) $(PROJECT).original.lua
 	@echo "==> Cleaned build artifacts"
 
 # CI/CD Targets
@@ -203,12 +220,19 @@ install_precommit_hook:
 	@chmod +x .git/hooks/pre-commit
 	@echo "Pre-commit hook installed successfully."
 
-.PHONY: all build export watch import_assets export_assets clean lint ci-version ci-export ci-upload ci-update install_precommit_hook
+docs: build
+	@echo "==> Checking for ldoc..."
+	@if ! command -v ldoc &> /dev/null; then \
+		echo "ldoc not found, attempting to install with luarocks..."; \
+		if command -v luarocks &> /dev/null; then \
+			luarocks install ldoc; \
+		else \
+			echo "Error: luarocks not found. Please install luarocks and then ldoc manually."; \
+			exit 1; \
+		fi; \
+	fi
+	@echo "==> Running ldoc..."
+	@ldoc ${OUTPUT} -d docs
+	@echo "==> Documentation generated."
 
-#-- <WAVES>
-#-- 000:224578acdeeeeddcba95434567653100
-#-- </WAVES>
-#
-#-- <SFX>
-#-- 000:000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000500000000000
-#-- </SFX>
+.PHONY: all build minify export watch import_assets export_assets clean lint ci-version ci-export ci-upload ci-update install_precommit_hook docs
