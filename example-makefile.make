@@ -34,28 +34,22 @@ UPDATE_SERVER ?= https://games.vps.teletype.hu
 
 all: build
 
-build: $(OUTPUT)
-
-$(OUTPUT): $(SRC) $(ORDER)
+build:
 	@rm -f $(OUTPUT)
 	@sed 's/\r$$//' $(ORDER) | while read f; do \
 		cat "$(SRC_DIR)/$$f" >> $(OUTPUT); \
 		echo "" >> $(OUTPUT); \
 	done
 
-$(MINIFY):
-	@echo "==> Downloading $(MINIFY)"
-	@curl -fsSL $(MINIFY_URL) -o $(MINIFY)
+download-minify:
+	@test -f $(MINIFY) || { echo "==> Downloading $(MINIFY)"; curl -fsSL $(MINIFY_URL) -o $(MINIFY); }
 
-minify: $(OUTPUT_ORIGINAL)
-
-$(OUTPUT_ORIGINAL): $(SRC) $(ORDER) $(MINIFY)
-	@$(MAKE) build
+minify: build download-minify
 	@echo "==> Minifying $(OUTPUT)"
 	@cp $(OUTPUT) $(OUTPUT_ORIGINAL)
 	@lua $(MINIFY) minify $(OUTPUT_ORIGINAL) > $(OUTPUT)
 
-export: build minify
+export: minify
 	@if [ -z "$(VERSION)" ]; then \
 		echo "ERROR: VERSION not set!"; \
 		exit 1; \
@@ -77,7 +71,7 @@ watch:
 	$(MAKE) build
 	fswatch -o $(SRC_DIR) $(ORDER) assets | while read; do $(MAKE) build; done
 
-import_assets: $(OUTPUT)
+import_assets: build
 	@TIC_CMD="load $(OUTPUT) &"; \
 	for t in $(ASSET_TYPES); do \
 		for f in $(ASSETS_DIR)/$$t/*.png; do \
@@ -172,40 +166,8 @@ export_assets:
 	@$(call f_export_asset_awk,WAVES,$(OUTPUT),$(ASSETS_LUA))
 
 clean:
-	@rm -f $(PROJECT)-*.tic $(PROJECT)-*.html.zip $(OUTPUT) $(OUTPUT_MIN) $(PROJECT).original.lua
+	@rm -f $(PROJECT)-*.tic $(PROJECT)-*.html.zip $(PROJECT)-*-docs.zip $(PROJECT)-docs.zip $(OUTPUT) $(OUTPUT_ORIGINAL)
 	@echo "==> Cleaned build artifacts"
-
-# CI/CD Targets
-ci-version:
-	@VERSION=$$(sed -n "s/^-- version: //p" inc/meta/meta.header.lua | head -n 1 | tr -d "[:space:]"); \
-	BRANCH=$${CI_COMMIT_BRANCH:-$${WOODPECKER_BRANCH}}; \
-	BRANCH=$$(echo "$$BRANCH" | tr '/' '-'); \
-	if [ "$$BRANCH" != "main" ] && [ "$$BRANCH" != "master" ] && [ -n "$$BRANCH" ]; then \
-		VERSION=dev-$$VERSION-$$BRANCH; \
-	fi; \
-	echo "VERSION is: $$VERSION"; \
-	echo $$VERSION > $(VERSION_FILE)
-
-ci-export:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	echo "==> Building and exporting version $$VERSION"; \
-	$(MAKE) export VERSION=$$VERSION
-
-ci-upload:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	echo "==> Uploading artifacts for version $$VERSION"; \
-	ls -lh $(PROJECT)-$$VERSION.* $(PROJECT).tic $(PROJECT).html.zip 2>/dev/null || true; \
-	cp $(PROJECT).lua $(PROJECT)-$$VERSION.lua; \
-	FILE_LUA=$(PROJECT)-$$VERSION.lua; \
-	FILE_TIC=$(PROJECT)-$$VERSION.tic; \
-	FILE_HTML_ZIP=$(PROJECT)-$$VERSION.html.zip; \
-	SCP_TARGET="$(DROPAREA_USER)@$(DROPAREA_HOST):$(DROPAREA_TARGET_PATH)/"; \
-	sshpass -p "$(DROPAREA_SSH_PASSWORD)" scp -o StrictHostKeyChecking=no -P $(DROPAREA_PORT) $$FILE_LUA $$FILE_TIC $$FILE_HTML_ZIP $$SCP_TARGET
-
-ci-update:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	echo "==> Triggering update for version $$VERSION"; \
-	curl "$(UPDATE_SERVER)/update?secret=$(UPDATE_SECRET)&name=$(PROJECT)&platform=tic80&version=$$VERSION"
 
 install_precommit_hook:
 	@echo "Installing Git pre-commit hook (lint check)..."
@@ -235,4 +197,62 @@ docs: build
 	@ldoc ${OUTPUT} -d docs
 	@echo "==> Documentation generated."
 
-.PHONY: all build minify export watch import_assets export_assets clean lint ci-version ci-export ci-upload ci-update install_precommit_hook docs
+# -----------------------------------------
+# CI/CD Pipeline targets
+# -----------------------------------------
+
+ci-version:
+	@VERSION=$$(sed -n "s/^-- version: //p" inc/meta/meta.header.lua | head -n 1 | tr -d "[:space:]"); \
+	BRANCH=$${CI_COMMIT_BRANCH:-$${WOODPECKER_BRANCH}}; \
+	BRANCH=$$(echo "$$BRANCH" | tr '/' '-'); \
+	if [ "$$BRANCH" != "main" ] && [ "$$BRANCH" != "master" ] && [ -n "$$BRANCH" ]; then \
+		VERSION=dev-$$VERSION-$$BRANCH; \
+	fi; \
+	echo "VERSION is: $$VERSION"; \
+	echo $$VERSION > $(VERSION_FILE)
+
+ci-lint: lint
+
+ci-minify: minify
+
+ci-docs:
+	@VERSION=$$(cat $(VERSION_FILE)); \
+	echo "==> Generating docs from $(OUTPUT_ORIGINAL)"; \
+	ldoc $(OUTPUT_ORIGINAL) -d docs; \
+	echo "==> Zipping docs for version $$VERSION"; \
+	(cd docs && zip -r ../$(PROJECT)-$$VERSION-docs.zip .); \
+	cp $(PROJECT)-$$VERSION-docs.zip $(PROJECT)-docs.zip; \
+	echo "==> Docs zip created"
+
+ci-export:
+	@VERSION=$$(cat $(VERSION_FILE)); \
+	echo "==> Exporting HTML for version $$VERSION"; \
+	tic80 --cli --skip --fs=. \
+		--cmd="load $(OUTPUT) & save $(PROJECT)-$$VERSION & export html $(PROJECT)-$$VERSION.html & exit"; \
+	if [ -f "$(PROJECT)-$$VERSION.tic" ]; then \
+		cp $(PROJECT)-$$VERSION.tic $(PROJECT).tic; \
+	fi; \
+	if [ -f "$(PROJECT)-$$VERSION.html.zip" ]; then \
+		cp $(PROJECT)-$$VERSION.html.zip $(PROJECT).html.zip; \
+	fi; \
+	echo "==> Generated files:"; \
+	ls -lh $(PROJECT)-$$VERSION.* $(PROJECT).tic $(PROJECT).html.zip 2>/dev/null || true
+
+ci-artifact:
+	@VERSION=$$(cat $(VERSION_FILE)); \
+	echo "==> Uploading artifacts for version $$VERSION"; \
+	cp $(PROJECT).lua $(PROJECT)-$$VERSION.lua; \
+	SCP_TARGET="$(DROPAREA_USER)@$(DROPAREA_HOST):$(DROPAREA_TARGET_PATH)/"; \
+	sshpass -p "$(DROPAREA_SSH_PASSWORD)" scp -o StrictHostKeyChecking=no -P $(DROPAREA_PORT) \
+		$(PROJECT)-$$VERSION.lua \
+		$(PROJECT)-$$VERSION.tic \
+		$(PROJECT)-$$VERSION.html.zip \
+		$(PROJECT)-$$VERSION-docs.zip \
+		$$SCP_TARGET
+
+ci-update:
+	@VERSION=$$(cat $(VERSION_FILE)); \
+	echo "==> Triggering update for version $$VERSION"; \
+	curl "$(UPDATE_SERVER)/update?secret=$(UPDATE_SECRET)&name=$(PROJECT)&platform=tic80&version=$$VERSION"
+
+.PHONY: all build download-minify minify export watch import_assets export_assets clean lint install_precommit_hook docs ci-version ci-lint ci-minify ci-docs ci-export ci-artifact ci-update
