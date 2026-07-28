@@ -53,7 +53,7 @@ steps:
   - name: update
     image: alpine
     environment:
-      UPDATE_SERVER: https://games.vps.teletype.hu
+      UPDATE_SERVER: https://teletypegames.org
       UPDATE_SECRET:
         from_secret: update_secret_key
     commands:
