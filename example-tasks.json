@@ -1,0 +1,35 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    // Copy to .vscode/tasks.json and replace "impostor" with your PROJECT name.
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run TIC80",
+            "type": "shell",
+            "command": "tic80 --fs=. impostor.lua",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Build & Run TIC80",
+            "type": "shell",
+            "command": "make clean && make build && tic80 --fs=. impostor.lua",
+            "problemMatcher": []
+        },
+        {
+            "label": "Export assets",
+            "type": "shell",
+            "command": "make export_assets",
+            "problemMatcher": []
+        },
+        {
+            "label": "Make build",
+            "type": "shell",
+            "command": "make build"
+        }
+    ]
+}
