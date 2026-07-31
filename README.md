@@ -29,19 +29,4 @@ The pipeline uploads `$(PROJECT)-$(VERSION).lua`, `.tic`, `.html.zip`
 and `-docs.zip` to the droparea, then triggers
 `/update?platform=tic80&name=$(PROJECT)&version=$(VERSION)`.
 
-## Builder image
-
-The export step uses the TIC-80 Pro image
-(`git.teletypegames.org/internal/tic80pro`, built from the
-`tic80pro-dockerfile` repo). For the lint / minify / docs steps,
-`builder.Dockerfile` bakes Lua 5.4 + luacheck + ldoc + zip into
-`git.teletypegames.org/internal/tic80-luatools`, so the pipeline no longer
-runs luarocks (and a C compiler install) on every run:
-
-```sh
-docker build --platform linux/amd64 -f builder.Dockerfile \
-  -t git.teletypegames.org/internal/tic80-luatools:latest .
-docker push git.teletypegames.org/internal/tic80-luatools:latest
-```
-
 Detailed documentation lives on the wiki: `/development/tic80`.

@@ -6,22 +6,32 @@ steps:
       - 'make ci-version'
 
   - name: lint
-    image: git.teletypegames.org/internal/tic80-luatools:latest
+    image: alpine
     commands:
+      - 'apk add --no-cache make lua5.4 lua5.4-dev luarocks gcc musl-dev'
+      - 'ln -sf /usr/bin/lua5.4 /usr/bin/lua'
+      - 'ln -sf /usr/bin/luarocks-5.4 /usr/bin/luarocks'
+      - 'luarocks install luacheck'
       - 'make ci-lint'
 
   - name: minify
-    image: git.teletypegames.org/internal/tic80-luatools:latest
+    image: alpine
     commands:
+      - 'apk add --no-cache make lua5.4 curl'
+      - 'ln -sf /usr/bin/lua5.4 /usr/bin/lua'
       - 'make ci-minify'
 
   - name: docs
-    image: git.teletypegames.org/internal/tic80-luatools:latest
+    image: alpine
     commands:
+      - 'apk add --no-cache make lua5.4 lua5.4-dev luarocks gcc musl-dev zip'
+      - 'ln -sf /usr/bin/lua5.4 /usr/bin/lua'
+      - 'ln -sf /usr/bin/luarocks-5.4 /usr/bin/luarocks'
+      - 'luarocks install ldoc'
       - 'make ci-docs'
 
   - name: export
-    image: git.teletypegames.org/internal/tic80pro:latest
+    image: git.teletype.hu/internal/tic80pro:latest
     environment:
       XDG_RUNTIME_DIR: /tmp
     commands:
