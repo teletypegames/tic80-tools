@@ -6,22 +6,22 @@ steps:
       - 'make ci-version'
 
   - name: lint
-    image: git.teletype.hu/internal/tic80-luatools:latest
+    image: git.teletypegames.org/internal/tic80-luatools:latest
     commands:
       - 'make ci-lint'
 
   - name: minify
-    image: git.teletype.hu/internal/tic80-luatools:latest
+    image: git.teletypegames.org/internal/tic80-luatools:latest
     commands:
       - 'make ci-minify'
 
   - name: docs
-    image: git.teletype.hu/internal/tic80-luatools:latest
+    image: git.teletypegames.org/internal/tic80-luatools:latest
     commands:
       - 'make ci-docs'
 
   - name: export
-    image: git.teletype.hu/internal/tic80pro:latest
+    image: git.teletypegames.org/internal/tic80pro:latest
     environment:
       XDG_RUNTIME_DIR: /tmp
     commands:

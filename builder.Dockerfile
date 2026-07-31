@@ -3,13 +3,13 @@
 # run luarocks (and a C compiler install) on every run.
 #
 # The export step keeps using the separate TIC-80 Pro image
-# (git.teletype.hu/internal/tic80pro, built from the tic80pro-dockerfile
+# (git.teletypegames.org/internal/tic80pro, built from the tic80pro-dockerfile
 # repo) — this image only covers the Lua tooling around it.
 #
 # Build & push (the CI runner is linux/amd64):
 #   docker build --platform linux/amd64 -f builder.Dockerfile \
-#     -t git.teletype.hu/internal/tic80-luatools:latest .
-#   docker push git.teletype.hu/internal/tic80-luatools:latest
+#     -t git.teletypegames.org/internal/tic80-luatools:latest .
+#   docker push git.teletypegames.org/internal/tic80-luatools:latest
 
 FROM alpine:3.22
 
