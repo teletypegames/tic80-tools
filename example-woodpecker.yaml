@@ -31,11 +31,18 @@ steps:
       - 'make ci-docs'
 
   - name: export
-    image: git.teletype.hu/internal/tic80pro:latest
+    image: git.teletypegames.org/internal/tic80pro:latest
     environment:
       XDG_RUNTIME_DIR: /tmp
     commands:
       - 'make ci-export'
+
+  - name: binaries
+    image: git.teletypegames.org/internal/tic80pro:latest
+    environment:
+      XDG_RUNTIME_DIR: /tmp
+    commands:
+      - 'make ci-binaries'
 
   - name: artifact
     image: alpine

@@ -3,14 +3,15 @@
 CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
 
 - `example-makefile.make` — project Makefile: local dev targets
-  (`build`, `minify`, `watch`, `lint`, `docs`, `import_assets`,
-  `export_assets`, `clean`, `install_precommit_hook`) plus the
-  Woodpecker pipeline targets (`ci-version`, `ci-lint`, `ci-minify`,
-  `ci-docs`, `ci-export`, `ci-artifact`, `ci-update`).
+  (`build`, `minify`, `binaries`, `watch`, `lint`, `docs`,
+  `import_assets`, `export_assets`, `clean`, `install_precommit_hook`)
+  plus the Woodpecker pipeline targets (`ci-version`, `ci-lint`,
+  `ci-minify`, `ci-docs`, `ci-export`, `ci-binaries`, `ci-artifact`,
+  `ci-update`).
 - `example-woodpecker.yaml` — Woodpecker pipeline: version → lint →
-  minify → docs → export (TIC-80 Pro image) → artifact (scp to the
-  droparea) → update (calls the teletypegames `/update` endpoint with
-  `platform=tic80`).
+  minify → docs → export (TIC-80 Pro image) → binaries (native
+  players, same image) → artifact (scp to the droparea) → update
+  (calls the teletypegames `/update` endpoint with `platform=tic80`).
 - `example-tasks.json` — VS Code `.vscode/tasks.json` with the common
   dev tasks: **Run TIC80** (default build task, `Cmd+Shift+B`),
   **Build & Run TIC80**, **Export assets** and **Make build**.
@@ -25,8 +26,28 @@ CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
 3. Copy `example-tasks.json` to `.vscode/tasks.json` and replace the
    cart name (`impostor.lua`) with `$(PROJECT).lua`.
 
-The pipeline uploads `$(PROJECT)-$(VERSION).lua`, `.tic`, `.html.zip`
-and `-docs.zip` to the droparea, then triggers
-`/update?platform=tic80&name=$(PROJECT)&version=$(VERSION)`.
+The pipeline uploads `$(PROJECT)-$(VERSION).lua`, `.tic`, `.html.zip`,
+`-docs.zip` and the native player zips (`-win-x64.zip`,
+`-linux-x64.zip`, `-mac-x64.zip`) to the droparea, then triggers
+`/update?platform=tic80&name=$(PROJECT)&version=$(VERSION)`. The API's
+`BinaryAttachment` concern picks up the `<name>-<version>-<slug>.zip`
+files automatically and registers them as `win_x64` / `linux_x64` /
+`mac_x64` release assets.
+
+## Native binaries
+
+`make binaries VERSION=x.y` runs TIC-80's `export win / linux / mac`,
+which produces self-contained players with the cart baked in. Two
+things to know:
+
+- The player templates are **downloaded from tic80.com at export
+  time**, so the CI step needs network access (the Woodpecker steps
+  have it — the same way the artifact step reaches the droparea).
+- All upstream players are x86-64 — the mac binary is Intel-only
+  (runs via Rosetta on Apple Silicon), hence the `mac-x64` slug.
+
+Each binary is zipped with a single `$(PROJECT)-$(VERSION)-<slug>/`
+root folder; the zip is created on unix so the executable bit
+survives.
 
 Detailed documentation lives on the wiki: `/development/tic80`.

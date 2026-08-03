@@ -67,6 +67,41 @@ export: minify
 	@echo "==> Generated files:"
 	@ls -lh $(PROJECT)-$(VERSION).* $(PROJECT).tic $(PROJECT).html.zip 2>/dev/null || true
 
+# -----------------------------------------
+# Native binaries — self-contained TIC-80 players with the cart baked in.
+# The player templates are downloaded from tic80.com at export time, so
+# this target needs network access. All upstream players are x86-64,
+# hence the win-x64 / linux-x64 / mac-x64 slugs (the API maps
+# <project>-<version>-<slug>.zip droparea files to ReleaseAsset kinds).
+# -----------------------------------------
+
+BINARY_SLUGS = win-x64 linux-x64 mac-x64
+
+# $(1) slug, $(2) exported file, $(3) file name inside the package
+# (unixos zip őrzi a végrehajtási bitet)
+define f_pack_binary
+	PKG_DIR="$(PROJECT)-$(VERSION)-$(1)"; \
+	rm -rf "$$PKG_DIR" "$$PKG_DIR.zip"; \
+	mkdir -p "$$PKG_DIR"; \
+	mv "$(2)" "$$PKG_DIR/$(3)"; \
+	chmod +x "$$PKG_DIR/$(3)"; \
+	zip -r "$$PKG_DIR.zip" "$$PKG_DIR" >/dev/null; \
+	rm -rf "$$PKG_DIR"; \
+	echo "==> $$PKG_DIR.zip kesz"
+endef
+
+binaries:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "ERROR: VERSION not set!"; \
+		exit 1; \
+	fi
+	@echo "==> Exporting native players for version $(VERSION)"
+	@tic80 --cli --skip --fs=. \
+		--cmd="load $(OUTPUT) & export win $(PROJECT)-win & export linux $(PROJECT)-linux & export mac $(PROJECT)-mac & exit"
+	@$(call f_pack_binary,win-x64,$(PROJECT)-win.exe,$(PROJECT).exe)
+	@$(call f_pack_binary,linux-x64,$(PROJECT)-linux,$(PROJECT))
+	@$(call f_pack_binary,mac-x64,$(PROJECT)-mac,$(PROJECT))
+
 watch:
 	$(MAKE) build
 	fswatch -o $(SRC_DIR) $(ORDER) assets | while read; do $(MAKE) build; done
@@ -167,6 +202,8 @@ export_assets:
 
 clean:
 	@rm -f $(PROJECT)-*.tic $(PROJECT)-*.html.zip $(PROJECT)-*-docs.zip $(PROJECT)-docs.zip $(OUTPUT) $(OUTPUT_ORIGINAL)
+	@rm -f $(PROJECT)-*-win-x64.zip $(PROJECT)-*-linux-x64.zip $(PROJECT)-*-mac-x64.zip
+	@rm -f $(PROJECT)-win.exe $(PROJECT)-linux $(PROJECT)-mac
 	@echo "==> Cleaned build artifacts"
 
 install_precommit_hook:
@@ -238,16 +275,25 @@ ci-export:
 	echo "==> Generated files:"; \
 	ls -lh $(PROJECT)-$$VERSION.* $(PROJECT).tic $(PROJECT).html.zip 2>/dev/null || true
 
+ci-binaries:
+	@VERSION=$$(cat $(VERSION_FILE)); \
+	$(MAKE) binaries VERSION=$$VERSION
+
 ci-artifact:
 	@VERSION=$$(cat $(VERSION_FILE)); \
 	echo "==> Uploading artifacts for version $$VERSION"; \
 	cp $(PROJECT).lua $(PROJECT)-$$VERSION.lua; \
+	BINS=""; \
+	for slug in $(BINARY_SLUGS); do \
+		[ -f "$(PROJECT)-$$VERSION-$$slug.zip" ] && BINS="$$BINS $(PROJECT)-$$VERSION-$$slug.zip"; \
+	done; \
 	SCP_TARGET="$(DROPAREA_USER)@$(DROPAREA_HOST):$(DROPAREA_TARGET_PATH)/"; \
 	sshpass -p "$(DROPAREA_SSH_PASSWORD)" scp -o StrictHostKeyChecking=no -P $(DROPAREA_PORT) \
 		$(PROJECT)-$$VERSION.lua \
 		$(PROJECT)-$$VERSION.tic \
 		$(PROJECT)-$$VERSION.html.zip \
 		$(PROJECT)-$$VERSION-docs.zip \
+		$$BINS \
 		$$SCP_TARGET
 
 ci-update:
@@ -255,4 +301,4 @@ ci-update:
 	echo "==> Triggering update for version $$VERSION"; \
 	curl "$(UPDATE_SERVER)/update?secret=$(UPDATE_SECRET)&name=$(PROJECT)&platform=tic80&version=$$VERSION"
 
-.PHONY: all build download-minify minify export watch import_assets export_assets clean lint install_precommit_hook docs ci-version ci-lint ci-minify ci-docs ci-export ci-artifact ci-update
+.PHONY: all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs ci-version ci-lint ci-minify ci-docs ci-export ci-binaries ci-artifact ci-update
