@@ -10,8 +10,8 @@ CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
   `ci-update`).
 - `example-woodpecker.yaml` — Woodpecker pipeline: version → lint →
   minify → docs → export (TIC-80 Pro image) → binaries (native
-  players, same image) → artifact (scp to the droparea) → update
-  (calls the teletypegames `/update` endpoint with `platform=tic80`).
+  players, same image) → artifact (HTTP POST to `/build/upload`) → update
+  (calls the teletypegames `/build/publish` endpoint with `platform=tic80`).
 - `example-tasks.json` — VS Code `.vscode/tasks.json` with the common
   dev tasks: **Run TIC80** (default build task, `Cmd+Shift+B`),
   **Build & Run TIC80**, **Export assets** and **Make build**.
@@ -22,14 +22,14 @@ CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
    (the cartridge is built as `$(PROJECT).lua` from the file list in
    `$(PROJECT).inc`).
 2. Copy `example-woodpecker.yaml` to `.woodpecker.yaml` and add the
-   `droparea_ssh_password` / `update_secret_key` secrets in Woodpecker.
+   `update_secret_key` secret in Woodpecker.
 3. Copy `example-tasks.json` to `.vscode/tasks.json` and replace the
    cart name (`impostor.lua`) with `$(PROJECT).lua`.
 
 The pipeline uploads `$(PROJECT)-$(VERSION).lua`, `.tic`, `.html.zip`,
 `-docs.zip` and the native player zips (`-win-x64.zip`,
-`-linux-x64.zip`, `-mac-x64.zip`) to the droparea, then triggers
-`/update?platform=tic80&name=$(PROJECT)&version=$(VERSION)`. The API's
+`-linux-x64.zip`, `-mac-x64.zip`) via `/build/upload`, then triggers
+`/build/publish?platform=tic80&name=$(PROJECT)&version=$(VERSION)`. The API's
 `BinaryAttachment` concern picks up the `<name>-<version>-<slug>.zip`
 files automatically and registers them as `win_x64` / `linux_x64` /
 `mac_x64` release assets.
@@ -42,7 +42,7 @@ things to know:
 
 - The player templates are **downloaded from tic80.com at export
   time**, so the CI step needs network access (the Woodpecker steps
-  have it — the same way the artifact step reaches the droparea).
+  have it — the same way the artifact step reaches the API).
 - All upstream players are x86-64 — the mac binary is Intel-only
   (runs via Rosetta on Apple Silicon), hence the `mac-x64` slug.
 

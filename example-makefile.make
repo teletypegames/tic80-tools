@@ -26,10 +26,6 @@ LINT_TMP_MAP   := /tmp/_lint_map.txt
 # CI/CD variables
 VERSION_FILE = .version
 GAME_LANG ?= lua
-DROPAREA_HOST ?= vps.teletype.hu
-DROPAREA_PORT ?= 2223
-DROPAREA_TARGET_PATH ?= /home/drop
-DROPAREA_USER ?= drop
 UPDATE_SERVER ?= https://teletypegames.org
 
 all: build
@@ -287,18 +283,15 @@ ci-artifact:
 	for slug in $(BINARY_SLUGS); do \
 		[ -f "$(PROJECT)-$$VERSION-$$slug.zip" ] && BINS="$$BINS $(PROJECT)-$$VERSION-$$slug.zip"; \
 	done; \
-	SCP_TARGET="$(DROPAREA_USER)@$(DROPAREA_HOST):$(DROPAREA_TARGET_PATH)/"; \
-	sshpass -p "$(DROPAREA_SSH_PASSWORD)" scp -o StrictHostKeyChecking=no -P $(DROPAREA_PORT) \
-		$(PROJECT)-$$VERSION.lua \
-		$(PROJECT)-$$VERSION.tic \
-		$(PROJECT)-$$VERSION.html.zip \
-		$(PROJECT)-$$VERSION-docs.zip \
-		$$BINS \
-		$$SCP_TARGET
+	for f in $(PROJECT)-$$VERSION.lua $(PROJECT)-$$VERSION.tic $(PROJECT)-$$VERSION.html.zip $(PROJECT)-$$VERSION-docs.zip $$BINS; do \
+		curl -fsS -H "X-Update-Secret: $(UPDATE_SECRET)" \
+			-F "file=@$$f" \
+			"$(UPDATE_SERVER)/build/upload?name=$(PROJECT)&version=$$VERSION" || exit 1; \
+	done
 
 ci-update:
 	@VERSION=$$(cat $(VERSION_FILE)); \
 	echo "==> Triggering update for version $$VERSION"; \
-	curl "$(UPDATE_SERVER)/update?secret=$(UPDATE_SECRET)&name=$(PROJECT)&platform=tic80&version=$$VERSION"
+	curl -fsS -X POST -H "X-Update-Secret: $(UPDATE_SECRET)" "$(UPDATE_SERVER)/build/publish?name=$(PROJECT)&platform=tic80&version=$$VERSION"
 
 .PHONY: all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs ci-version ci-lint ci-minify ci-docs ci-export ci-binaries ci-artifact ci-update
