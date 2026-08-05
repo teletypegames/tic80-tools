@@ -289,9 +289,9 @@ ci-artifact:
 			"$(UPDATE_SERVER)/build/upload?name=$(PROJECT)&version=$$VERSION" || exit 1; \
 	done
 
-ci-update:
+ci-publish:
 	@VERSION=$$(cat $(VERSION_FILE)); \
 	echo "==> Triggering update for version $$VERSION"; \
 	curl -fsS -X POST -H "X-Update-Secret: $(UPDATE_SECRET)" "$(UPDATE_SERVER)/build/publish?name=$(PROJECT)&platform=tic80&version=$$VERSION"
 
-.PHONY: all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs ci-version ci-lint ci-minify ci-docs ci-export ci-binaries ci-artifact ci-update
+.PHONY: all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs ci-version ci-lint ci-minify ci-docs ci-export ci-binaries ci-artifact ci-publish

@@ -54,7 +54,7 @@ steps:
       - 'apk add --no-cache make curl'
       - 'make ci-artifact'
 
-  - name: update
+  - name: publish
     image: alpine
     environment:
       UPDATE_SERVER: https://teletypegames.org
@@ -62,4 +62,4 @@ steps:
         from_secret: update_secret_key
     commands:
       - 'apk add --no-cache make curl'
-      - 'make ci-update'
+      - 'make ci-publish'

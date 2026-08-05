@@ -7,7 +7,7 @@ CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
   `import_assets`, `export_assets`, `clean`, `install_precommit_hook`)
   plus the Woodpecker pipeline targets (`ci-version`, `ci-lint`,
   `ci-minify`, `ci-docs`, `ci-export`, `ci-binaries`, `ci-artifact`,
-  `ci-update`).
+  `ci-publish`).
 - `example-woodpecker.yaml` — Woodpecker pipeline: version → lint →
   minify → docs → export (TIC-80 Pro image) → binaries (native
   players, same image) → artifact (HTTP POST to `/build/upload`) → update
