@@ -4,14 +4,12 @@ CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
 
 - `example-makefile.make` — project Makefile: local dev targets
   (`build`, `minify`, `binaries`, `watch`, `lint`, `docs`,
-  `import_assets`, `export_assets`, `clean`, `install_precommit_hook`)
-  plus the Woodpecker pipeline targets (`ci-version`, `ci-lint`,
-  `ci-minify`, `ci-docs`, `ci-export`, `ci-binaries`, `ci-artifact`,
-  `ci-publish`).
-- `example-woodpecker.yaml` — Woodpecker pipeline: version → lint →
-  minify → docs → export (TIC-80 Pro image) → binaries (native
-  players, same image) → artifact (HTTP POST to `/build/upload`) → update
-  (calls the teletypegames `/build/publish` endpoint with `platform=tic80`).
+  `import_assets`, `export_assets`, `clean`, `install_precommit_hook`).
+- `example-woodpecker.yaml` — a one-line marker (`platform: tic80`): the
+  full pipeline (version → lint → minify → docs → export → binaries →
+  artifact → publish) is served by the update server's Woodpecker
+  configuration extension — preview it with
+  `curl "https://teletypegames.org/build/config?platform=tic80"`.
 - `example-tasks.json` — VS Code `.vscode/tasks.json` with the common
   dev tasks: **Run TIC80** (default build task, `Cmd+Shift+B`),
   **Build & Run TIC80**, **Export assets** and **Make build**.
@@ -21,12 +19,15 @@ CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
 1. Copy `example-makefile.make` to `Makefile` and set `PROJECT`
    (the cartridge is built as `$(PROJECT).lua` from the file list in
    `$(PROJECT).inc`).
-2. Copy `example-woodpecker.yaml` to `.woodpecker.yaml` and add the
-   `update_secret_key` secret in Woodpecker.
+2. Copy `example-woodpecker.yaml` to `.woodpecker.yaml` (a one-line
+   marker — the pipeline itself is served by the update server; add
+   `name:` when the software name differs from the repo name) and add
+   the `application_token` secret in Woodpecker (an ApplicationToken
+   with the `update` + `upload` scopes, created in the admin).
 3. Copy `example-tasks.json` to `.vscode/tasks.json` and replace the
    cart name (`impostor.lua`) with `$(PROJECT).lua`.
 
-The pipeline uploads `$(PROJECT)-$(VERSION).lua`, `.tic`, `.html.zip`,
+The served pipeline uploads `$(PROJECT)-$(VERSION).lua`, `.tic`, `.html.zip`,
 `-docs.zip` and the native player zips (`-win-x64.zip`,
 `-linux-x64.zip`, `-mac-x64.zip`) via `/build/upload`, then triggers
 `/build/publish?platform=tic80&name=$(PROJECT)&version=$(VERSION)`. The API's

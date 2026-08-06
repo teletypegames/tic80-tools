@@ -24,9 +24,6 @@ LINT_TMP_LUA  := /tmp/_lint_combined.lua
 LINT_TMP_MAP   := /tmp/_lint_map.txt
 
 # CI/CD variables
-VERSION_FILE = .version
-GAME_LANG ?= lua
-UPDATE_SERVER ?= https://teletypegames.org
 
 all: build
 
@@ -230,68 +227,4 @@ docs: build
 	@ldoc ${OUTPUT} -d docs
 	@echo "==> Documentation generated."
 
-# -----------------------------------------
-# CI/CD Pipeline targets
-# -----------------------------------------
-
-ci-version:
-	@VERSION=$$(sed -n "s/^-- version: //p" inc/meta/meta.header.lua | head -n 1 | tr -d "[:space:]"); \
-	BRANCH=$${CI_COMMIT_BRANCH:-$${WOODPECKER_BRANCH}}; \
-	BRANCH=$$(echo "$$BRANCH" | tr '/' '-'); \
-	if [ "$$BRANCH" != "main" ] && [ "$$BRANCH" != "master" ] && [ -n "$$BRANCH" ]; then \
-		VERSION=dev-$$VERSION-$$BRANCH; \
-	fi; \
-	echo "VERSION is: $$VERSION"; \
-	echo $$VERSION > $(VERSION_FILE)
-
-ci-lint: lint
-
-ci-minify: minify
-
-ci-docs:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	echo "==> Generating docs from $(OUTPUT_ORIGINAL)"; \
-	ldoc $(OUTPUT_ORIGINAL) -d docs; \
-	echo "==> Zipping docs for version $$VERSION"; \
-	(cd docs && zip -r ../$(PROJECT)-$$VERSION-docs.zip .); \
-	cp $(PROJECT)-$$VERSION-docs.zip $(PROJECT)-docs.zip; \
-	echo "==> Docs zip created"
-
-ci-export:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	echo "==> Exporting HTML for version $$VERSION"; \
-	tic80 --cli --skip --fs=. \
-		--cmd="load $(OUTPUT) & save $(PROJECT)-$$VERSION & export html $(PROJECT)-$$VERSION.html & exit"; \
-	if [ -f "$(PROJECT)-$$VERSION.tic" ]; then \
-		cp $(PROJECT)-$$VERSION.tic $(PROJECT).tic; \
-	fi; \
-	if [ -f "$(PROJECT)-$$VERSION.html.zip" ]; then \
-		cp $(PROJECT)-$$VERSION.html.zip $(PROJECT).html.zip; \
-	fi; \
-	echo "==> Generated files:"; \
-	ls -lh $(PROJECT)-$$VERSION.* $(PROJECT).tic $(PROJECT).html.zip 2>/dev/null || true
-
-ci-binaries:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	$(MAKE) binaries VERSION=$$VERSION
-
-ci-artifact:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	echo "==> Uploading artifacts for version $$VERSION"; \
-	cp $(PROJECT).lua $(PROJECT)-$$VERSION.lua; \
-	BINS=""; \
-	for slug in $(BINARY_SLUGS); do \
-		[ -f "$(PROJECT)-$$VERSION-$$slug.zip" ] && BINS="$$BINS $(PROJECT)-$$VERSION-$$slug.zip"; \
-	done; \
-	for f in $(PROJECT)-$$VERSION.lua $(PROJECT)-$$VERSION.tic $(PROJECT)-$$VERSION.html.zip $(PROJECT)-$$VERSION-docs.zip $$BINS; do \
-		curl -fsS -H "X-Update-Secret: $(UPDATE_SECRET)" \
-			-F "file=@$$f" \
-			"$(UPDATE_SERVER)/build/upload?name=$(PROJECT)&version=$$VERSION" || exit 1; \
-	done
-
-ci-publish:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	echo "==> Publishing version $$VERSION"; \
-	curl -fsS -X POST -H "X-Update-Secret: $(UPDATE_SECRET)" "$(UPDATE_SERVER)/build/publish?name=$(PROJECT)&platform=tic80&version=$$VERSION"
-
-.PHONY: all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs ci-version ci-lint ci-minify ci-docs ci-export ci-binaries ci-artifact ci-publish
+.PHONY: all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs
