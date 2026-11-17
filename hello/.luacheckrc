@@ -1,0 +1,8 @@
+std = "lua53"
+globals = { "TIC", "BOOT", "SCN", "BDR", "OVR", "MENU" }
+read_globals = {
+  "btn", "btnp", "circ", "circb", "clip", "cls", "elli", "ellib", "exit", "fget", "font", "fset",
+  "key", "keyp", "line", "map", "memcpy", "memset", "mget", "mouse", "mset", "music", "peek",
+  "peek1", "peek2", "peek4", "pix", "pmem", "poke", "poke1", "poke2", "poke4", "rect", "rectb",
+  "reset", "sfx", "spr", "sync", "textri", "time", "trace", "tri", "trib", "tstamp", "ttri", "vbank"
+}

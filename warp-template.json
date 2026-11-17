@@ -1,0 +1,9 @@
+{
+  "files": {
+    "example-makefile.make": "Makefile",
+    "example-tasks.json": ".vscode/tasks.json",
+    "hello/.luacheckrc": ".luacheckrc",
+    "hello/inc/main.lua": "inc/main.lua",
+    "hello/hello.inc": "{name}.inc"
+  }
+}

@@ -14,6 +14,11 @@ CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
   dev tasks: **Run TIC80** (default build task, `Cmd+Shift+B`),
   **Build & Run TIC80**, **Export assets** and **Make build**.
 
+- `hello/` and `warp-template.json` — the Hello World a new game starts from: *WarpEngine:
+  New Game* in the toolbox (1.2.0 or later) copies `hello/inc/main.lua`, `hello/.luacheckrc`
+  and `hello/hello.inc` as `<name>.inc` (the order file the Makefile and the pipeline read),
+  and writes the header `inc/meta/meta.header.lua` with your title and author.
+
 ## Usage in a game repo
 
 1. Copy `example-makefile.make` to `Makefile` and set `PROJECT`
