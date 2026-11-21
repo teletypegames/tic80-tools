@@ -42,8 +42,8 @@ the tasks, keeping yours.
    `name:` when the software name differs from the repo name) and add
    the `application_token` secret in Woodpecker (an ApplicationToken
    with the `update` + `upload` scopes, created in the admin).
-3. Copy `example-tasks.json` to `.vscode/tasks.json` and replace the
-   cart name (`impostor.lua`) with `$(PROJECT).lua`.
+3. Copy `example-tasks.json` to `.vscode/tasks.json` (its tasks run the
+   Makefile targets; nothing to rename).
 
 The served pipeline uploads `$(PROJECT)-$(VERSION).lua`, `.tic`, `.html.zip`,
 `-docs.zip` and the native player zips (`-win-x64.zip`,
