@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev image",
+      "detail": "Builds the dev container image locally from .devcontainer/Dockerfile",
+      "type": "warpengine",
+      "action": "devImage",
+      "problemMatcher": []
+    },
+    {
+      "label": "play",
+      "detail": "Builds and plays the game in the host's web runtime (TIC-80)",
+      "type": "warpengine",
+      "action": "play",
+      "problemMatcher": []
+    }
+  ]
+}

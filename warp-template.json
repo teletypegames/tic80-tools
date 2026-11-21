@@ -5,5 +5,16 @@
     "hello/.luacheckrc": ".luacheckrc",
     "hello/inc/main.lua": "inc/main.lua",
     "hello/hello.inc": "{name}.inc"
+  },
+  "devcontainer": {
+    "files": {
+      "example-devcontainer.json": ".devcontainer/devcontainer.json",
+      "example-devcontainer.Dockerfile": ".devcontainer/Dockerfile"
+    },
+    "fill": [
+      "example-devcontainer.json",
+      "example-devcontainer.Dockerfile"
+    ],
+    "tasks": "example-devcontainer-tasks.json"
   }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "{title}",
+  "build": { "dockerfile": "Dockerfile" },
+  "runArgs": ["--add-host=host.docker.internal:host-gateway"],
+  "remoteUser": "dev",
+  "updateRemoteUserUID": true,
+  "remoteEnv": { "WARPENGINE_DEVCONTAINER": "1" },
+  "customizations": {
+    "vscode": { "extensions": ["TeletypeGames.warpengine-toolbox"] }
+  }
+}

@@ -10,14 +10,27 @@ CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
   artifact → publish) is served by the update server's Woodpecker
   configuration extension — preview it with
   `curl "https://teletypegames.org/build/config?platform=tic80"`.
-- `example-tasks.json` — VS Code `.vscode/tasks.json` with the common
-  dev tasks: **Run TIC80** (default build task, `Cmd+Shift+B`),
-  **Build & Run TIC80**, **Export assets** and **Make build**.
+- `example-tasks.json` — VS Code `.vscode/tasks.json`: `build`, `lint` and
+  `export assets` as `warpengine` tasks, and `run (TIC-80)` (`make run`, a
+  local `tic80`).
 
 - `hello/` and `warp-template.json` — the Hello World a new game starts from: *WarpEngine:
   New Game* in the toolbox (1.2.0 or later) copies `hello/inc/main.lua`, `hello/.luacheckrc`
   and `hello/hello.inc` as `<name>.inc` (the order file the Makefile and the pipeline read),
   and writes the header `inc/meta/meta.header.lua` with your title and author.
+
+## Dev container
+
+`warp-template.json` has a `devcontainer` key that the WarpEngine Toolbox reads
+(an older toolbox ignores it): a new project gets `.devcontainer/` from
+`example-devcontainer.json` and `example-devcontainer.Dockerfile` — the CI
+builder image the host names (`{builderImage}`) plus git and a `dev` user —
+so a computer with only Docker builds with the same toolchain as the pipeline.
+The tasks of `example-devcontainer-tasks.json` are merged into
+`.vscode/tasks.json`: `dev image` builds the container image, `play` builds the
+game and plays it in the host's web runtime. The tic80pro image has TIC-80 and Lua; the dev container adds `luacheck` for `make lint`. The TIC-80 window does not open in the container: `run (TIC-80)` builds there and runs `make run` (a local `tic80`).
+For an existing game repo, *WarpEngine: Add Dev Container* adds it and merges
+the tasks, keeping yours.
 
 ## Usage in a game repo
 

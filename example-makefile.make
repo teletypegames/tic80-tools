@@ -34,6 +34,9 @@ build:
 		echo "" >> $(OUTPUT); \
 	done
 
+run: build
+	tic80 --fs=. $(OUTPUT)
+
 download-minify:
 	@test -f $(MINIFY) || { echo "==> Downloading $(MINIFY)"; curl -fsSL $(MINIFY_URL) -o $(MINIFY); }
 
@@ -227,4 +230,4 @@ docs: build
 	@ldoc ${OUTPUT} -d docs
 	@echo "==> Documentation generated."
 
-.PHONY: all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs
+.PHONY: run all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs
