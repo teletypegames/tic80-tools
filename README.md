@@ -29,7 +29,7 @@ so a computer with only Docker builds with the same toolchain as the pipeline.
 The tasks of `example-devcontainer-tasks.json` are merged into
 `.vscode/tasks.json`: `dev image` builds the container image, `play` builds the
 game and plays it in the host's web runtime. The tic80pro image has TIC-80 and Lua; the dev container adds `luacheck` for `make lint`. The TIC-80 window does not open in the container: `run (TIC-80)` builds there and runs `make run` (a local `tic80`).
-The container editor gets its extensions from `example-devcontainer.json`: the WarpEngine Toolbox, Makefile Tools (its configure prompts off; the Toolbox tasks build) and the Lua language server (`sumneko.lua`, the TIC-80 API as known globals) and Lua Minify for the cart's size limit.
+The container editor gets its extensions from `example-devcontainer.json`: the WarpEngine Toolbox, Makefile Tools (its configure prompts off; the Toolbox tasks build) and the Lua language server (`sumneko.lua`, the TIC-80 API as known globals) and Lua Minify for the cart's size limit. It also mounts the computer's Docker socket, with the Docker CLI in the image and `dev` in the socket's group, so the Toolbox lists, starts and restarts the local engine's containers from inside the container.
 For an existing game repo, *WarpEngine: Add Dev Container* adds it and merges
 the tasks, keeping yours.
 

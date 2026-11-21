@@ -22,3 +22,7 @@ RUN set -e; \
     fi; \
     mkdir -p /etc/sudoers.d; \
     echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev
+
+# The Docker CLI: the WarpEngine Toolbox lists and starts the computer's WarpEngine containers through the
+# socket devcontainer.json mounts.
+COPY --from=docker:27-cli /usr/local/bin/docker /usr/local/bin/docker
