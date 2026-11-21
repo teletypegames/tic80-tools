@@ -6,6 +6,19 @@
   "updateRemoteUserUID": true,
   "remoteEnv": { "WARPENGINE_DEVCONTAINER": "1" },
   "customizations": {
-    "vscode": { "extensions": ["TeletypeGames.warpengine-toolbox"] }
+    "vscode": {
+      "extensions": [
+        "TeletypeGames.warpengine-toolbox",
+        "ms-vscode.makefile-tools",
+        "sumneko.lua",
+        "informagico.vscode-lua-minify"
+      ],
+      "settings": {
+        "makefile.configureOnOpen": false,
+        "makefile.configureOnEdit": false,
+        "makefile.configureAfterCommand": false,
+        "Lua.diagnostics.globals": ["TIC", "BOOT", "SCN", "BDR", "OVR", "MENU", "btn", "btnp", "key", "keyp", "mouse", "cls", "pix", "line", "rect", "rectb", "circ", "circb", "elli", "ellib", "tri", "trib", "textri", "ttri", "spr", "map", "mget", "mset", "font", "print", "clip", "peek", "peek1", "peek2", "peek4", "poke", "poke1", "poke2", "poke4", "memcpy", "memset", "pmem", "sfx", "music", "sync", "vbank", "fget", "fset", "exit", "reset", "time", "tstamp", "trace"]
+      }
+    }
   }
 }
