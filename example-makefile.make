@@ -20,6 +20,8 @@ ASSETS_LUA = inc/meta/meta.assets.lua
 ASSETS_DIR = assets
 ASSET_TYPES = tiles sprites sfx music
 
+WEB_DIR    = dist/web
+
 LINT_TMP_LUA  := /tmp/_lint_combined.lua
 LINT_TMP_MAP   := /tmp/_lint_map.txt
 
@@ -36,6 +38,18 @@ build:
 
 run: build
 	tic80 --fs=. $(OUTPUT)
+
+# the lint when luacheck is installed (the CI's tic80 image has none: the
+# pipeline's own lint step runs it), else the cartridge build
+check: build
+	@if command -v luacheck >/dev/null 2>&1; then $(MAKE) lint; else echo "==> luacheck is not installed: lint skipped"; fi
+
+# the HTML export (TIC-80 with its web player) unpacked into dist/web
+web: build
+	@mkdir -p $(WEB_DIR)
+	tic80 --cli --skip --fs=. --cmd="load $(OUTPUT) & export html $(PROJECT)-web.html & exit"
+	unzip -o $(PROJECT)-web.html.zip -d $(WEB_DIR)
+	rm -f $(PROJECT)-web.html.zip
 
 download-minify:
 	@test -f $(MINIFY) || { echo "==> Downloading $(MINIFY)"; curl -fsSL $(MINIFY_URL) -o $(MINIFY); }
@@ -200,6 +214,7 @@ clean:
 	@rm -f $(PROJECT)-*.tic $(PROJECT)-*.html.zip $(PROJECT)-*-docs.zip $(PROJECT)-docs.zip $(OUTPUT) $(OUTPUT_ORIGINAL)
 	@rm -f $(PROJECT)-*-win-x64.zip $(PROJECT)-*-linux-x64.zip $(PROJECT)-*-mac-x64.zip
 	@rm -f $(PROJECT)-win.exe $(PROJECT)-linux $(PROJECT)-mac
+	@rm -rf $(WEB_DIR)
 	@echo "==> Cleaned build artifacts"
 
 install_precommit_hook:
@@ -230,4 +245,4 @@ docs: build
 	@ldoc ${OUTPUT} -d docs
 	@echo "==> Documentation generated."
 
-.PHONY: run all build download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs
+.PHONY: run all build check web download-minify minify export binaries watch import_assets export_assets clean lint install_precommit_hook docs

@@ -1,5 +1,0 @@
-# One-line marker: the full pipeline is served by the update server's
-# Woodpecker configuration extension. Preview it with:
-#   curl "https://teletypegames.org/build/config?platform=tic80"
-platform: tic80
-# name: mygame   # only when the software name differs from the repo name

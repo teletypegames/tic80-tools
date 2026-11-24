@@ -2,11 +2,12 @@
 
 CI/CD templates for [TIC-80](https://tic80.com) (Lua) game projects.
 
-- `example-makefile.make` — project Makefile: local dev targets
-  (`build`, `minify`, `binaries`, `watch`, `lint`, `docs`,
-  `import_assets`, `export_assets`, `clean`, `install_precommit_hook`).
-- `example-woodpecker.yaml` — a one-line marker (`platform: tic80`): the
-  full pipeline (version → lint → minify → docs → export → binaries →
+- `example-makefile.make` — project Makefile: the shared targets
+  (`build`, `run`, `check`, `web`, `clean`, see below) plus `minify`,
+  `binaries`, `watch`, `lint`, `docs`, `import_assets`, `export_assets` and
+  `install_precommit_hook`.
+- `.woodpecker.yaml` (written by New Game, not kept here) — a one-line
+  marker (`platform: tic80`): the full pipeline (version → lint → minify → docs → export → binaries →
   artifact → publish) is served by the update server's Woodpecker
   configuration extension — preview it with
   `curl "https://teletypegames.org/build/config?platform=tic80"`.
@@ -33,12 +34,21 @@ The container editor gets its extensions from `example-devcontainer.json`: the W
 For an existing game repo, *WarpEngine: Add Dev Container* adds it and merges
 the tasks, keeping yours.
 
+## Makefile contract
+
+The Makefile has the targets every WarpEngine template shares: `build`, `run`, `check` (the CI's check step runs it in the builder image),
+`clean`, `web` (TIC-80's HTML export unpacked into `dist/web`). `warp-engine check makefile` of the
+[WarpEngine CLI](https://wiki.teletypegames.org/godoc/warp-engine-cli/latest/cmd/warp-engine/)
+checks a project against it. `check` runs `lint` where `luacheck` is
+installed (the dev container has it; the CI lints in a step of its own) and builds
+the cartridge.
+
 ## Usage in a game repo
 
 1. Copy `example-makefile.make` to `Makefile` and set `PROJECT`
    (the cartridge is built as `$(PROJECT).lua` from the file list in
    `$(PROJECT).inc`).
-2. Copy `example-woodpecker.yaml` to `.woodpecker.yaml` (a one-line
+2. Create `.woodpecker.yaml` with the line `platform: tic80` (a one-line
    marker — the pipeline itself is served by the update server; add
    `name:` when the software name differs from the repo name) and add
    the `application_token` secret in Woodpecker (an ApplicationToken
